@@ -1,0 +1,19 @@
+{
+    "name": "netom/colander",
+    "type": "library",
+    "description": "Input filter and validator library for PHP with a functional twist",
+    "keywords": ["validator", "filter", "input"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name":  "Fábián Tamás László",
+            "email": "giganetom@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "autoload": {
+        "files": ["colander.php"]
+    }
+}

@@ -1,10 +1,8 @@
 <?php
 
-namespace colander;
+class FactoryException extends Exception {}
 
-class FactoryException extends \Exception {}
-
-class ValidationException extends \Exception {}
+class ValidationException extends Exception {}
 
 /*
  * If the first parameter is false, throw exception
@@ -95,9 +93,25 @@ function map($callables) {
 
     return function ($data) use ($callables) {
         $ret = $data;
+
+        $exceptions = [];
+
         foreach ($callables as $name => $callable) {
-            $ret[$name] = $callable($ret[$name]);
+            try {
+                $ret[$name] = $callable($ret[$name]);
+            } catch (ValidationException $e) {
+                $exceptions[$name] = $e;
+            }
         }
+
+        if (count($exceptions) > 0) {
+            $messages = [];
+            foreach ($exceptions as $name => $e) {
+                $messages[] = "the field $name is " . $e->getMessage();
+            }
+            throw new ValidationException(join("\n", $messages));
+        }
+
         return $ret;
     };
 }
@@ -125,9 +139,21 @@ function map_() {
  * Combine a tuple of filter functions into a tuple filter
  */
 function tuple() {
+    // TODO
 }
 
+/*
+ * A more strict tuple validator 
+ */
 function tuple_() {
+    // TODO
+}
+
+/*
+ * Apply a validation rule to all elements of a list
+ */
+function lst() {
+    // TODO
 }
 
 /*
@@ -143,16 +169,14 @@ function call($callable, $param) {
  * Most of the filter / factory functions is just mindless
  * boilerplate. This function takes care of that.
  */
-function mkBolilerplate($bpdir) {
+function mkBolilerplate($bpfile = '/tmp/colander_generated.php') {
 
-    $phpname = $bpdir . '/yativafip_generated.php';
-
-    if (is_file($phpname)) {
-        //require_once $phpname;
-        //return;
+    if (is_file($bpfile)) {
+        require_once $bpfile;
+        return;
     }
 
-    $php = "<?php\n\nnamespace FV;\n\n";
+    $php = "<?php\n\n";
 
     /*
      * PHP's is_* functions wrapped as filter functions
@@ -185,7 +209,7 @@ function mkBolilerplate($bpdir) {
 
         $php .= 
             "function $filtname($_d) {\n" .
-            "    trueOrX($pname($_d), 'not a $name');\n" .
+            "    trueOrX($pname($_d), \"not a $name\");\n" .
             "    return $_d;\n" .
             "}\n" .
             "function $factname() {\n" .
@@ -202,8 +226,8 @@ function mkBolilerplate($bpdir) {
         'minLen'   => ['strlen($d) >= $p', 'shorter than $p'],
         'maxCount' => ['count($d) <= $p', 'longer than $p'],
         'minCount' => ['count($d) >= $p', 'shorter than $p'],
-        'max'      => ['$d <= $p', 'greater than $p'],
-        'min'      => ['$d >= $p', 'smaller than $p']
+        'maxNum'   => ['$d <= $p', 'greater than $p'],
+        'minNum'   => ['$d >= $p', 'smaller than $p']
     ];
     
     foreach ($a as $name => list($cond, $errmsg)) {
@@ -215,7 +239,7 @@ function mkBolilerplate($bpdir) {
 
         $php .= 
             "function $filtname($_p, $_d) {\n" .
-            "    trueOrX($cond, '$errmsg');\n" .
+            "    trueOrX($cond, \"$errmsg\");\n" .
             "    return $_d;\n" .
             "}\n" .
             "function $factname($_p) {\n" .
@@ -223,26 +247,7 @@ function mkBolilerplate($bpdir) {
             "}\n\n";
     }
 
-    file_put_contents($phpname, $php);
+    file_put_contents($bpfile, $php);
 
-    require_once $phpname;
+    require_once $bpfile;
 }
-
-/*************** USAGE *****************/
-
-mkBolilerplate('/tmp');
-
-$data_in = [
-    'name' => 'This is my name',
-    'number_of_pets' => 12
-];
-
-$data = call(
-    map([
-        'name' => seq([fIsString(), fMaxLen(128)]),
-        'number_of_pets' => seq([fIsInt(), fMax(5) ])
-    ]),
-    $data_in
-);
-
-var_dump($data);

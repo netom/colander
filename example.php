@@ -12,7 +12,7 @@ $data_in = [
 try {
     $data = call(
         map([
-            'name' => seq([fIsString(), fMaxLen(128)]),
+            'name' => seq([fIsString(), fMaxLen(6)]),
             'number_of_pets' => seq([fIsInt(), fMaxNum(5)])
         ]),
         $data_in

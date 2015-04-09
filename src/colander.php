@@ -1,5 +1,9 @@
 <?php
 
+namespace Colander;
+
+use Exception;
+
 class FactoryException extends Exception {}
 
 class ValidationException extends Exception {}
@@ -169,14 +173,18 @@ function call($callable, $param) {
  * Most of the filter / factory functions is just mindless
  * boilerplate. This function takes care of that.
  */
-function mkBolilerplate($bpfile = '/tmp/colander_generated.php') {
+function mkBoilerplate($alwaysUpdate = false, $namespace = null, $bpfile = '/tmp/colander_generated.php') {
 
-    if (is_file($bpfile)) {
+    if (!$alwaysUpdate && is_file($bpfile)) {
         require_once $bpfile;
         return;
     }
 
     $php = "<?php\n\n";
+
+    if ($namespace !== null) {
+        $php .= "namespace $namespace;\n\n";
+    }
 
     /*
      * PHP's is_* functions wrapped as filter functions

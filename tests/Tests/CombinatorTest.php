@@ -2,75 +2,128 @@
 
 class CombinatorTest extends PHPUnit_Framework_TestCase
 {
-    public function testSeq() {
-        $_ = Colander\seq([
+    public function testSeqOk() {
+        # Validation functions
+        $vfs = [
             function ($in) {
                 return $in .= 'a';
             },
             function ($in) {
                 return $in .= 'b';
             }
-        ]);
+        ];
 
+        $_ = Colander\seq($vfs);
+        $this->assertEquals('xab', $_('x'));
+
+        $_ = Colander\seq_($vfs);
         $this->assertEquals('xab', $_('x'));
     }
 
-    public function testSeqFail() {
-        try {
-            $_ = Colander\seq([
-                function ($in) {
-                    return $in .= 'a';
-                },
-                function ($in) {
-                    return $in .= 'b';
-                }
-            ]);
+    public function testSeqErr() {
+        $vfs = [
+            function ($in) {
+                throw new Colander\ValidationException('a');
+            },
+            function ($in) {
+                throw new Colander\ValidationException('b');
+            }
+        ];
 
-            $this->assertEquals('xab', $_('x'));
+        $_ = Colander\seq($vfs);
+
+        try {
+            $_('dummy');
         } catch (Colander\ValidationException $e) {
-            
+            $this->assertEquals('a, b', $e->getMessage());
+        }
+
+        $_ = Colander\seq_($vfs);
+
+        try {
+            $_('dummy');
+        } catch (Colander\ValidationException $e) {
+            $this->assertEquals('a', $e->getMessage());
         }
     }
 
-    public function testSeq_() {
+    public function testMapOk() {
+        # Validation functions
+        $vfs = [
+            'a' => function ($in) {
+                return $in . 'a';
+            },
+            'b' => function ($in) {
+                return $in . 'b';
+            }
+        ];
+
+        foreach (['', 'S', '_', '_S'] as $tail) {
+            $func = "Colander\\map$tail";
+            $_ = $func($vfs);
+            $this->assertEquals(['a'=>'aa', 'b'=>'bb'], $_(['a'=>'a', 'b'=>'b']));
+        }
     }
 
-    public function testSeq_Fail() {
+    public function testMapErr() {
+        $vfs = [
+            'a' => function ($in) {
+                throw new Colander\ValidationException('a');
+            },
+            'b' => function ($in) {
+                throw new Colander\ValidationException('b');
+            }
+        ];
+
+        $_ = Colander\map($vfs);
+
+        try {
+            $_(['a'=>'a', 'a'=>'b']);
+        } catch (Colander\ValidationException $e) {
+            $this->assertEquals("the field a is a\nthe field b is b", $e->getMessage());
+        }
+
+        $_ = Colander\mapS($vfs);
+
+        try {
+            $_('dummy');
+        } catch (Colander\ValidationException $e) {
+            $this->assertEquals("the field a is a\nthe field b is b", $e->getMessage());
+        }
+
+        $_ = Colander\map_($vfs);
+
+        try {
+            $_('dummy');
+        } catch (Colander\ValidationException $e) {
+            $this->assertEquals("the field a is a", $e->getMessage());
+        }
+
+        $_ = Colander\map_S($vfs);
+
+        try {
+            $_('dummy');
+        } catch (Colander\ValidationException $e) {
+            $this->assertEquals("the field a is a", $e->getMessage());
+        }
     }
 
-    public function testMap() {
+    public function testMapStrict() {
     }
 
-    public function testMapFail() {
+    public function testTupleOk() {
     }
 
-    public function testMapS() {
+    public function testTupleErr() {
     }
 
-    public function testMapSFail() {
+    public function testTupleStrict() {
     }
 
-    public function testMap_() {
+    public function testLstOk() {
     }
 
-    public function testMap_Fail() {
+    public function testLstErr() {
     }
 
-    public function testMap_S() {
-    }
-
-    public function testMap_SFail() {
-    }
-
-    public function testLst() {
-    }
-
-    public function testLst_() {
-    }
-
-    public function testTuple() {
-    }
-
-    public function testTuple_() {
-    }
 }

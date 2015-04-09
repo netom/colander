@@ -1,12 +1,12 @@
 <?php
 
+//TODO: hasKey, isEmpty, isNull
+
 namespace Colander;
 
-use Exception;
+class FactoryException extends \Exception {}
 
-class FactoryException extends Exception {}
-
-class ValidationException extends Exception {}
+class ValidationException extends \Exception {}
 
 /*
  * If the first parameter is false, throw exception
@@ -102,7 +102,9 @@ function map($callables) {
 
         foreach ($callables as $name => $callable) {
             try {
-                $ret[$name] = $callable($ret[$name]);
+                if (array_key_exists($name, $ret)) {
+                    $ret[$name] = $callable($ret[$name]);
+                }
             } catch (ValidationException $e) {
                 $exceptions[$name] = $e;
             }
@@ -127,37 +129,59 @@ function map($callables) {
  * 
  * Fields with no rules count as valudation errors.
  */
-function map_() {
-    _chkCallables($map);
+function map_($callables) {
+    _chkCallables($callables);
 
-    return function ($data) use ($map) {
+    return function ($data) use ($callables) {
         $ret = $data;
         foreach ($callables as $name => $callable) {
-            $ret[$name] = $callable($ret[$name]);
+            if (array_key_exists($name, $ret)) {
+                $ret[$name] = $callable($ret[$name]);
+            }
         }
         return $ret;
     };
+}
+
+function mapS() {
+    return function () {};
+}
+
+function map_S() {
+    return function () {};
 }
 
 /*
  * Combine a tuple of filter functions into a tuple filter
  */
 function tuple() {
-    // TODO
+    return function () {};
 }
 
 /*
  * A more strict tuple validator 
  */
+function tupleS() {
+    return function () {};
+}
+
 function tuple_() {
-    // TODO
+    return function () {};
+}
+
+function tuple_S() {
+    return function () {};
 }
 
 /*
  * Apply a validation rule to all elements of a list
  */
 function lst() {
-    // TODO
+    return function () {};
+}
+
+function lst_() {
+    return function () {};
 }
 
 /*

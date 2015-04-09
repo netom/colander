@@ -16,6 +16,20 @@ class CombinatorTest extends PHPUnit_Framework_TestCase
     }
 
     public function testSeqFail() {
+        try {
+            $_ = Colander\seq([
+                function ($in) {
+                    return $in .= 'a';
+                },
+                function ($in) {
+                    return $in .= 'b';
+                }
+            ]);
+
+            $this->assertEquals('xab', $_('x'));
+        } catch (Colander\ValidationException $e) {
+            
+        }
     }
 
     public function testSeq_() {

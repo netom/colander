@@ -13,36 +13,36 @@ class CombinatorTest extends PHPUnit_Framework_TestCase
             }
         ];
 
-        $_ = Colander\seq($vfs);
+        $_ = seq($vfs);
         $this->assertEquals('xab', $_('x'));
 
-        $_ = Colander\seq_($vfs);
+        $_ = seq_($vfs);
         $this->assertEquals('xab', $_('x'));
     }
 
     public function testSeqErr() {
         $vfs = [
             function ($in) {
-                throw new Colander\ValidationException('a');
+                throw new ValidationException('a');
             },
             function ($in) {
-                throw new Colander\ValidationException('b');
+                throw new ValidationException('b');
             }
         ];
 
-        $_ = Colander\seq($vfs);
+        $_ = seq($vfs);
 
         try {
             $_('dummy');
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals('a, b', $e->getMessage());
         }
 
-        $_ = Colander\seq_($vfs);
+        $_ = seq_($vfs);
 
         try {
             $_('dummy');
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals('a', $e->getMessage());
         }
     }
@@ -59,7 +59,7 @@ class CombinatorTest extends PHPUnit_Framework_TestCase
         ];
 
         foreach (['', 'S', '_', '_S'] as $tail) {
-            $func = "Colander\\map$tail";
+            $func = "\map$tail";
             $_ = $func($vfs);
             $this->assertEquals(['a'=>'aa', 'b'=>'bb'], $_(['a'=>'a', 'b'=>'b']));
         }
@@ -68,42 +68,42 @@ class CombinatorTest extends PHPUnit_Framework_TestCase
     public function testMapErr() {
         $vfs = [
             'a' => function ($in) {
-                throw new Colander\ValidationException('a');
+                throw new ValidationException('a');
             },
             'b' => function ($in) {
-                throw new Colander\ValidationException('b');
+                throw new ValidationException('b');
             }
         ];
 
-        $_ = Colander\map($vfs);
+        $_ = map($vfs);
 
         try {
             $_(['a'=>'a', 'a'=>'b']);
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals("the field a is a\nthe field b is b", $e->getMessage());
         }
 
-        $_ = Colander\mapS($vfs);
+        $_ = mapS($vfs);
 
         try {
             $_('dummy');
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals("the field a is a\nthe field b is b", $e->getMessage());
         }
 
-        $_ = Colander\map_($vfs);
+        $_ = map_($vfs);
 
         try {
             $_('dummy');
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals("the field a is a", $e->getMessage());
         }
 
-        $_ = Colander\map_S($vfs);
+        $_ = map_S($vfs);
 
         try {
             $_('dummy');
-        } catch (Colander\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertEquals("the field a is a", $e->getMessage());
         }
     }

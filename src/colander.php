@@ -1,39 +1,19 @@
 <?php
 
-//TODO: hasKey, isEmpty, isNull
-
-namespace Colander;
-
 class FactoryException extends \Exception {}
 
 class ValidationException extends \Exception {}
 
-/*
- * If the first parameter is false, throw exception
+class IncompleteValidationException extends ValidationException {}
+
+/**
+ * If the first parameter is false, throw a ValidationException
  */
 function trueOrX($bool, $errmsg) {
     if (!$bool) throw new ValidationException($errmsg);
 }
 
-function _chkCallables($callables) {
-    if (!is_array( $callables ) && ! $callables instanceof Traversable ) {
-        throw new FactoryException(
-            'The seq combinator expects a Traversable or array of callables. ' .
-            'The given parameter is not Traversable, nor an array.'
-        );
-    }
-
-    foreach ($callables as $callable) {
-        if (!is_callable($callable, true)) {
-            throw new FactoryException(
-                'The seq combinator expects a Traversable of callables. ' .
-                'An element of the input list is not callable.'
-            );
-        }
-    }
-}
-
-/*
+/**
  * Combine callables into a sequence
  *
  * Combine exceptions along the way
@@ -41,8 +21,6 @@ function _chkCallables($callables) {
  * seq([f1, f2, f3])($d) = f3(f2(f1($d)))
  */
 function seq($callables) {
-    _chkCallables($callables);
-
     return function ($data) use ($callables) {
         $ret = $data;
 
@@ -66,16 +44,12 @@ function seq($callables) {
     };
 }
 
-/*
+/**
  * Combine callables into a sequence
  *
  * Throw exception immediately at the first problem
- * 
- * seq([f1, f2, f3])($d) = f3(f2(f1($d)))
  */
 function seq_($callables) {
-    _chkCallables($callables);
-
     return function ($data) use ($callables) {
         $ret = $data;
         foreach ($callables as $callable) {
@@ -85,16 +59,15 @@ function seq_($callables) {
     };
 }
 
-/*
+/**
  * Combine a map of validation functions into a map validator
  * 
+ * Fields with no rules are returned unchanged.
+ * Combine exceptions.
+ *
  * map(['f1' => f1, 'f2' => f2], $d) = ['f1' => f1($d['f1'], 'f2' => f2($d['f2'])]
- * 
- * It returns fields with no filter rules unchanged.
  */
 function map($callables) {
-    _chkCallables($callables);
-
     return function ($data) use ($callables) {
         $ret = $data;
 
@@ -122,16 +95,31 @@ function map($callables) {
     };
 }
 
-/*
+/**
  * Combine a map of validation functions into a map validator
  * 
- * map(['f1' => f1, 'f2' => f2], $d) = ['f1' => f1($d['f1'], 'f2' => f2($d['f2'])]
- * 
- * Fields with no rules count as valudation errors.
+ * Fields with no rules count as validation errors.
+ * Combine exceptions.
+ */
+function mapS($callables) {
+    return seq(
+        function ($data) use ($callables) {
+            $diff = array_diff(array_keys($data), array_keys($callables));
+            if (count($diff) > 0) {
+                throw new IncompleteValidationException("The following fields lack validation rules: " . implode(',', $diff));
+            }
+        },
+        map($callables)
+    );
+}
+
+/*
+ * Combine a map of validation functions into a map validator
+ *
+ * Fields with no rules are returned unchanged.
+ * Throw exception immediately at the first problem.
  */
 function map_($callables) {
-    _chkCallables($callables);
-
     return function ($data) use ($callables) {
         $ret = $data;
         foreach ($callables as $name => $callable) {
@@ -143,143 +131,278 @@ function map_($callables) {
     };
 }
 
-function mapS() {
-    return function () {};
-}
-
-function map_S() {
-    return function () {};
+/**
+ * Combine a map of validation functions into a map validator
+ * 
+ * Fields with no rules count as validation errors.
+ * Throw exception immediately at the first problem.
+ */
+function map_S($callables) {
+    return seq(
+        function ($data) use ($callables) {
+            $diff = array_diff(array_keys($data), array_keys($callables));
+            if (count($diff) > 0) {
+                throw new IncompleteValidationException("The following fields lack validation rules: " . implode(',', $diff));
+            }
+        },
+        mapS($callables)
+    );
 }
 
 /*
  * Combine a tuple of filter functions into a tuple filter
+ * 
+ * If the array of callables is shorter than the input tuple, the dangling
+ * elements remain unchecked. If the input tuple is shorter than the callable
+ * array, the dangling validation functions don't execute.
+ * 
+ * Combine exceptions.
  */
-function tuple() {
+function tpl($callables) {
     return function () {};
+}
+
+/**
+ * Combine a tuple of filter functions into a tuple filter
+ * 
+ * If the array of callables is shorter than the input tuple, the dangling
+ * elements remain unchecked. If the input tuple is shorter than the callable
+ * array, the dangling validation functions don't execute.
+ * 
+ * Throw exception immediately at the first problem.
+ */
+function tpl_($callables) {
 }
 
 /*
- * A more strict tuple validator 
+ * Apply a validation rule to all elements of a list
+ * 
+ * Combine exceptions.
  */
-function tupleS() {
-    return function () {};
-}
-
-function tuple_() {
-    return function () {};
-}
-
-function tuple_S() {
+function lst($callable) {
     return function () {};
 }
 
 /*
  * Apply a validation rule to all elements of a list
+ * 
+ * Throw exception immediately at the first problem.
  */
-function lst() {
+function lst_($callable) {
     return function () {};
 }
 
-function lst_() {
-    return function () {};
-}
-
-/*
+/**
  * Call a callable with a single parameter
  */
 function call($callable, $param) {
     return call_user_func($callable, $param);
 }
 
-/*
- * Generates and/or loads PHP code
- * 
- * Most of the filter / factory functions is just mindless
- * boilerplate. This function takes care of that.
- */
-function mkBoilerplate($alwaysUpdate = false, $namespace = null, $bpfile = '/tmp/colander_generated.php') {
-
-    if (!$alwaysUpdate && is_file($bpfile)) {
-        require_once $bpfile;
-        return;
-    }
-
-    $php = "<?php\n\n";
-
-    if ($namespace !== null) {
-        $php .= "namespace $namespace;\n\n";
-    }
-
-    /*
-     * PHP's is_* functions wrapped as filter functions
-     */
-
-    $a = [
-        'array',
-        'bool',
-        'callable',
-        'double',
-        'float',
-        'int',
-        'integer',
-        'long',
-        'null',
-        'numeric',
-        'object',
-        'real',
-        'resource',
-        'scalar',
-        'string'
-    ];
-
-    foreach ($a as $name) {
-        $filtname = 'is' . ucfirst($name);    // Filter function name
-        $factname = 'f' . ucfirst($filtname); // Factory function name
-        $pname    = 'is_' . $name;            // PHP function name
-
-        $_d = '$d';
-
-        $php .= 
-            "function $filtname($_d) {\n" .
-            "    trueOrX($pname($_d), \"not a $name\");\n" .
-            "    return $_d;\n" .
-            "}\n" .
-            "function $factname() {\n" .
-            "    return function($_d) { return $filtname($_d); };\n" .
-            "}\n\n";
-    }
-
-    /*
-     * Our validation functions
-     */
-     
-    $a = [
-        'maxLen'   => ['strlen($d) <= $p', 'longer than $p'],
-        'minLen'   => ['strlen($d) >= $p', 'shorter than $p'],
-        'maxCount' => ['count($d) <= $p', 'longer than $p'],
-        'minCount' => ['count($d) >= $p', 'shorter than $p'],
-        'maxNum'   => ['$d <= $p', 'greater than $p'],
-        'minNum'   => ['$d >= $p', 'smaller than $p']
-    ];
-    
-    foreach ($a as $name => list($cond, $errmsg)) {
-        $filtname = $name;
-        $factname = 'f' . ucfirst($name);
-
-        $_d = '$d';
-        $_p = '$p';
-
-        $php .= 
-            "function $filtname($_p, $_d) {\n" .
-            "    trueOrX($cond, \"$errmsg\");\n" .
-            "    return $_d;\n" .
-            "}\n" .
-            "function $factname($_p) {\n" .
-            "    return function($_d) use ($_p) { return $filtname($_p, $_d); };\n" .
-            "}\n\n";
-    }
-
-    file_put_contents($bpfile, $php);
-
-    require_once $bpfile;
+function isEmpty($d) {
+    trueOrX(empty($d), "not empty");
+    return $d;
 }
+
+function fIsEmpty() {
+    return function() { return isEmpty($d); };
+}
+
+function hasKey($p, $d) {
+    trueOrX(array_key_exists($p, $d), "doesn't have key $p");
+    return $d;
+}
+
+function fHasKey($p) {
+    return function ($d) use ($p) { return hasKey($p, $d); };
+}
+
+function isArray($d) {
+    trueOrX(is_array($d), "not a array");
+    return $d;
+}
+
+function fIsArray() {
+    return function($d) { return isArray($d); };
+}
+
+function isBool($d) {
+    trueOrX(is_bool($d), "not a bool");
+    return $d;
+}
+
+function fIsBool() {
+    return function($d) { return isBool($d); };
+}
+
+function isCallable($d) {
+    trueOrX(is_callable($d), "not a callable");
+    return $d;
+}
+
+function fIsCallable() {
+    return function($d) { return isCallable($d); };
+}
+
+function isDouble($d) {
+    trueOrX(is_double($d), "not a double");
+    return $d;
+}
+
+function fIsDouble() {
+    return function($d) { return isDouble($d); };
+}
+
+function isFloat($d) {
+    trueOrX(is_float($d), "not a float");
+    return $d;
+}
+
+function fIsFloat() {
+    return function($d) { return isFloat($d); };
+}
+
+function isInt($d) {
+    trueOrX(is_int($d), "not a int");
+    return $d;
+}
+
+function fIsInt() {
+    return function($d) { return isInt($d); };
+}
+
+function isInteger($d) {
+    trueOrX(is_integer($d), "not a integer");
+    return $d;
+}
+
+function fIsInteger() {
+    return function($d) { return isInteger($d); };
+}
+
+function isLong($d) {
+    trueOrX(is_long($d), "not a long");
+    return $d;
+}
+
+function fIsLong() {
+    return function($d) { return isLong($d); };
+}
+
+function isNull($d) {
+    trueOrX(is_null($d), "not a null");
+    return $d;
+}
+
+function fIsNull() {
+    return function($d) { return isNull($d); };
+}
+
+function isNumeric($d) {
+    trueOrX(is_numeric($d), "not a numeric");
+    return $d;
+}
+
+function fIsNumeric() {
+    return function($d) { return isNumeric($d); };
+}
+
+function isObject($d) {
+    trueOrX(is_object($d), "not a object");
+    return $d;
+}
+
+function fIsObject() {
+    return function($d) { return isObject($d); };
+}
+
+function isReal($d) {
+    trueOrX(is_real($d), "not a real");
+    return $d;
+}
+
+function fIsReal() {
+    return function($d) { return isReal($d); };
+}
+
+function isResource($d) {
+    trueOrX(is_resource($d), "not a resource");
+    return $d;
+}
+
+function fIsResource() {
+    return function($d) { return isResource($d); };
+}
+
+function isScalar($d) {
+    trueOrX(is_scalar($d), "not a scalar");
+    return $d;
+}
+
+function fIsScalar() {
+    return function($d) { return isScalar($d); };
+}
+
+function isString($d) {
+    trueOrX(is_string($d), "not a string");
+    return $d;
+}
+
+function fIsString() {
+    return function($d) { return isString($d); };
+}
+
+function maxLen($p, $d) {
+    trueOrX(strlen($d) <= $p, "longer than $p");
+    return $d;
+}
+
+function fMaxLen($p) {
+    return function($d) use ($p) { return maxLen($p, $d); };
+}
+
+function minLen($p, $d) {
+    trueOrX(strlen($d) >= $p, "shorter than $p");
+    return $d;
+}
+
+function fMinLen($p) {
+    return function($d) use ($p) { return minLen($p, $d); };
+}
+
+function maxCount($p, $d) {
+    trueOrX(count($d) <= $p, "longer than $p");
+    return $d;
+}
+
+function fMaxCount($p) {
+    return function($d) use ($p) { return maxCount($p, $d); };
+}
+
+function minCount($p, $d) {
+    trueOrX(count($d) >= $p, "shorter than $p");
+    return $d;
+}
+
+function fMinCount($p) {
+    return function($d) use ($p) { return minCount($p, $d); };
+}
+
+function maxNum($p, $d) {
+    trueOrX($d <= $p, "greater than $p");
+    return $d;
+}
+
+function fMaxNum($p) {
+    return function($d) use ($p) { return maxNum($p, $d); };
+}
+
+function minNum($p, $d) {
+    trueOrX($d >= $p, "smaller than $p");
+    return $d;
+}
+
+function fMinNum($p) {
+    return function($d) use ($p) { return minNum($p, $d); };
+}
+

@@ -1,7 +1,5 @@
 <?php
 
-class FactoryException extends \Exception {}
-
 class ValidationException extends \Exception {}
 
 class IncompleteValidationException extends ValidationException {}
@@ -159,7 +157,29 @@ function map_S($callables) {
  * Combine exceptions.
  */
 function tpl($callables) {
-    return function () {};
+    return function ($data) use ($callables) {
+        $ret = $data;
+
+        $exceptions = [];
+
+        foreach ($callables as $i => $callable) {
+            try {
+                $ret[$i] = $callable($ret[$i]);
+            } catch (ValidationException $e) {
+                $exceptions[$i] = $e;
+            }
+        }
+
+        if (count($exceptions) > 0) {
+            $messages = [];
+            foreach ($exceptions as $i => $e) {
+                $messages[] = "the value #$i is " . $e->getMessage();
+            }
+            throw new ValidationException(join("\n", $messages));
+        }
+
+        return $ret;
+    };
 }
 
 /**
@@ -172,6 +192,15 @@ function tpl($callables) {
  * Throw exception immediately at the first problem.
  */
 function tpl_($callables) {
+    return function ($data) use ($callables) {
+        $ret = $data;
+
+        foreach ($callables as $i => $callable) {
+            $ret[$i] = $callable($ret[$i]);
+        }
+
+        return $ret;
+    };
 }
 
 /*
@@ -180,7 +209,27 @@ function tpl_($callables) {
  * Combine exceptions.
  */
 function lst($callable) {
-    return function () {};
+    return function ($data) use ($callable) {
+        $ret        = [];
+        $exceptions = [];
+        foreach ($data as $i => $value) {
+            try {
+                $ret[$i] = $callable($data[$i]);
+            } catch (ValidationException $e) {
+                $exceptions[$i] = $e;
+            }
+        }
+
+        if (count($exceptions) > 0) {
+            $messages = [];
+            foreach ($exceptions as $i => $e) {
+                $messages[] = "the value #$i is " . $e->getMessage();
+            }
+            throw new ValidationException(join("\n", $messages));
+        }
+
+        return $ret;
+    };
 }
 
 /*
@@ -189,7 +238,26 @@ function lst($callable) {
  * Throw exception immediately at the first problem.
  */
 function lst_($callable) {
-    return function () {};
+    return function ($data) use ($callable) {
+        $ret = [];
+        foreach ($data as $i => $value) {
+            try {
+                $ret[$i] = $callable($data[$i]);
+            } catch (ValidationException $e) {
+                $exceptions[$i] = $e;
+            }
+        }
+
+        if (count($exceptions) > 0) {
+            $messages = [];
+            foreach ($exceptions as $i => $e) {
+                $messages[] = "the value #$i is " . $e->getMessage();
+            }
+            throw new ValidationException(join("\n", $messages));
+        }
+
+        return $ret;
+    };
 }
 
 /**

@@ -100,15 +100,16 @@ function map($callables) {
  * Combine exceptions.
  */
 function mapS($callables) {
-    return seq(
+    return seq([
         function ($data) use ($callables) {
             $diff = array_diff(array_keys($data), array_keys($callables));
             if (count($diff) > 0) {
-                throw new IncompleteValidationException("The following fields lack validation rules: " . implode(',', $diff));
+                throw new IncompleteValidationException("the following fields lack validation rules: " . implode(',', $diff));
             }
+            return $data;
         },
         map($callables)
-    );
+    ]);
 }
 
 /*
@@ -122,7 +123,12 @@ function map_($callables) {
         $ret = $data;
         foreach ($callables as $name => $callable) {
             if (array_key_exists($name, $ret)) {
-                $ret[$name] = $callable($ret[$name]);
+                try {
+                    $ret[$name] = $callable($ret[$name]);
+                } catch (ValidationException $e) {
+                    $class = get_class($e);
+                    throw new $class("the field $name is " . $e->getMessage());
+                }
             }
         }
         return $ret;
@@ -136,15 +142,16 @@ function map_($callables) {
  * Throw exception immediately at the first problem.
  */
 function map_S($callables) {
-    return seq(
+    return seq_([
         function ($data) use ($callables) {
             $diff = array_diff(array_keys($data), array_keys($callables));
             if (count($diff) > 0) {
-                throw new IncompleteValidationException("The following fields lack validation rules: " . implode(',', $diff));
+                throw new IncompleteValidationException("the following fields lack validation rules: " . implode(',', $diff));
             }
+            return $data;
         },
-        mapS($callables)
-    );
+        map_($callables)
+    ]);
 }
 
 /*
@@ -173,7 +180,7 @@ function tpl($callables) {
         if (count($exceptions) > 0) {
             $messages = [];
             foreach ($exceptions as $i => $e) {
-                $messages[] = "the value #$i is " . $e->getMessage();
+                $messages[] = "the value $i is " . $e->getMessage();
             }
             throw new ValidationException(join("\n", $messages));
         }
@@ -196,7 +203,12 @@ function tpl_($callables) {
         $ret = $data;
 
         foreach ($callables as $i => $callable) {
-            $ret[$i] = $callable($ret[$i]);
+            try {
+                $ret[$i] = $callable($ret[$i]);
+            } catch (ValidationException $e) {
+                $class = get_class($e);
+                throw new $class("the value $i is " . $e->getMessage());
+            }
         }
 
         return $ret;
@@ -223,7 +235,7 @@ function lst($callable) {
         if (count($exceptions) > 0) {
             $messages = [];
             foreach ($exceptions as $i => $e) {
-                $messages[] = "the value #$i is " . $e->getMessage();
+                $messages[] = "the value $i is " . $e->getMessage();
             }
             throw new ValidationException(join("\n", $messages));
         }
@@ -244,16 +256,9 @@ function lst_($callable) {
             try {
                 $ret[$i] = $callable($data[$i]);
             } catch (ValidationException $e) {
-                $exceptions[$i] = $e;
+                $class = get_class($e);
+                throw new $class("the value $i is " . $e->getMessage());
             }
-        }
-
-        if (count($exceptions) > 0) {
-            $messages = [];
-            foreach ($exceptions as $i => $e) {
-                $messages[] = "the value #$i is " . $e->getMessage();
-            }
-            throw new ValidationException(join("\n", $messages));
         }
 
         return $ret;

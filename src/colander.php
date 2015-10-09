@@ -479,3 +479,18 @@ function fMinNum($p) {
     return function($d) use ($p) { return minNum($p, $d); };
 }
 
+function ensureKey($p, $d) {
+    return array_key_exists($p, $d) ? $d : array_merge($d, [$p => null]);
+}
+
+function fEnsureKey($p) {
+    return function($d) use ($p) { return ensureKey($p, $d); };
+}
+
+function defaultValue($p, $d) {
+    return isNull($d) ? $p : $d;
+}
+
+function fDefaultValue($p) {
+    return function($d) use ($p) { return defaultValue($p, $d); };
+}

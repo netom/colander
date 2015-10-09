@@ -479,12 +479,12 @@ function fMinNum($p) {
     return function($d) use ($p) { return minNum($p, $d); };
 }
 
-function ensureKey($p, $d) {
-    return array_key_exists($p, $d) ? $d : array_merge($d, [$p => null]);
+function ensureKey($k, $v, $d) {
+    return array_key_exists($k, $d) ? $d : array_merge($d, [$k => $v]);
 }
 
-function fEnsureKey($p) {
-    return function($d) use ($p) { return ensureKey($p, $d); };
+function fEnsureKey($k, $v) {
+    return function($d) use ($k, $v) { return ensureKey($k, $v, $d); };
 }
 
 function defaultValue($p, $d) {

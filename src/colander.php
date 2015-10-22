@@ -494,3 +494,20 @@ function defaultValue($p, $d) {
 function fDefaultValue($p) {
     return function($d) use ($p) { return defaultValue($p, $d); };
 }
+
+/**
+ * Select fields from an array, drop the rest
+ */
+function select($keys, $array) {
+    $ret = [];
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $array)) {
+            $ret[$key] = $array[$key];
+        }
+    }
+    return $ret;
+}
+
+function fSelect($keys) {
+    return function($array) use ($keys) { return select($keys, $array); };
+}

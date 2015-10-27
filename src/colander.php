@@ -511,3 +511,18 @@ function select($keys, $array) {
 function fSelect($keys) {
     return function($array) use ($keys) { return select($keys, $array); };
 }
+
+function dropNull($array) {
+    $ret = [];
+    foreach ($array as $k => $v) {
+        if ($v === null) {
+            continue;
+        }
+        $ret[$k] = $v;
+    }
+    return $ret;
+}
+
+function fDropNull() {
+    return function($array) { return dropNull($array); };
+}

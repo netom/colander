@@ -266,6 +266,20 @@ function lst_($callable) {
 }
 
 /**
+ * Throw exception only if ALL validation functions threw exceptions
+ */
+function any($callables, $errmsg = "All of the given conditions failed") {
+    return function ($data) use ($callables) {
+        foreach ($callables as $callable) {
+            try {
+                return $callable($data);
+            } catch (Exception $e) {}
+        }
+        throw new ValidationException($errmsg);
+    };
+}
+
+/**
  * Call a callable with a single parameter
  */
 function call($callable, $param) {

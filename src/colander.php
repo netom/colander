@@ -269,7 +269,7 @@ function lst_($callable) {
  * Throw exception only if ALL validation functions threw exceptions
  */
 function any($callables, $errmsg = "All of the given conditions failed") {
-    return function ($data) use ($callables) {
+    return function ($data) use ($callables, $errmsg) {
         foreach ($callables as $callable) {
             try {
                 return $callable($data);

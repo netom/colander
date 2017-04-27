@@ -540,3 +540,21 @@ function dropNull($array) {
 function fDropNull() {
     return function($array) { return dropNull($array); };
 }
+
+function equals($v, $d, $errmsg) {
+    trueOrX($v == $d, $errmsg);
+    return $d;
+}
+
+function fEquals($v, $errmsg = 'equality condition failed') {
+    return function($d) use ($v, $errmsg) { return equals($v, $d, $errmsg); };
+}
+
+function exactly($v, $d, $errmsg) {
+    trueOrX($v === $d, $errmsg);
+    return $d;
+}
+
+function fExactly($v, $errmsg = 'exactness condition failed') {
+    return function($d) use ($v, $errmsg) { return exactly($v, $d, $errmsg); };
+}
